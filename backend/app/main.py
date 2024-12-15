@@ -3,9 +3,12 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from . import models, schemas
-from .database import get_db
+from .database import get_db, engine
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+# Создаем таблицы в базе данных
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Business Bazaar API")
 
@@ -19,10 +22,7 @@ logger = logging.getLogger(__name__)
 # Добавьте CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://your-frontend-domain.com",
-        "http://localhost:3000"  # для разработки
-    ],
+    allow_origins=["*"],  # В продакшене укажите конкретные домены
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -41,25 +41,36 @@ async def global_exception_handler(request, exc):
 def read_root():
     return {"message": "Welcome to Business Bazaar API"}
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
 @app.get("/proposals/", response_model=List[schemas.Proposal])
 def read_proposals(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db)
 ):
-    proposals = db.query(models.Proposal).offset(skip).limit(limit).all()
-    return proposals
+    try:
+        proposals = db.query(models.Proposal).offset(skip).limit(limit).all()
+        return proposals
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/proposals/", response_model=schemas.Proposal, status_code=status.HTTP_201_CREATED)
 def create_proposal(
     proposal: schemas.ProposalCreate, 
     db: Session = Depends(get_db)
 ):
-    db_proposal = models.Proposal(**proposal.dict())
-    db.add(db_proposal)
-    db.commit()
-    db.refresh(db_proposal)
-    return db_proposal
+    try:
+        db_proposal = models.Proposal(**proposal.dict())
+        db.add(db_proposal)
+        db.commit()
+        db.refresh(db_proposal)
+        return db_proposal
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/proposals/{proposal_id}", response_model=schemas.Proposal)
 def read_proposal(proposal_id: int, db: Session = Depends(get_db)):
