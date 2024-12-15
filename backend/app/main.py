@@ -22,7 +22,10 @@ logger = logging.getLogger(__name__)
 # Добавьте CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # В продакшене укажите конкретные домены
+    allow_origins=[
+        "https://businessbazaar-frontend.herokuapp.com",
+        "http://localhost:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
