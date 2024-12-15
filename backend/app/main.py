@@ -63,7 +63,10 @@ def create_proposal(
     db: Session = Depends(get_db)
 ):
     try:
-        db_proposal = models.Proposal(**proposal.dict())
+        proposal_data = proposal.dict()
+        if proposal_data.get('seller_id') is None:
+            proposal_data.pop('seller_id', None)  # Удаляем None значение
+        db_proposal = models.Proposal(**proposal_data)
         db.add(db_proposal)
         db.commit()
         db.refresh(db_proposal)

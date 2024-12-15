@@ -30,11 +30,11 @@ class ProposalBase(BaseModel):
     location: str
 
 class ProposalCreate(ProposalBase):
-    pass
+    seller_id: Optional[int] = None
 
 class Proposal(ProposalBase):
     id: int
-    seller_id: int
+    seller_id: Optional[int]
     created_at: datetime
     updated_at: Optional[datetime]
 
